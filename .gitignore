@@ -8,3 +8,6 @@ venv/
 .idea/
 .vscode/
 .DS_Store
+
+# local preview settings
+.claude/
