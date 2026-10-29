@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Mikatoa – field guide poster</title>
+  <!-- One field-guide poster at A5 and 300 dpi (1748 × 2480 px): poster.html?n=1 … ?n=6.
+       The specimen is drawn by the live sketch in print mode, large and calm, small and
+       alarmed. render-posters.mjs saves all six as PNGs. -->
+  <style>
+    /* the website's fonts, as installed on this Mac (Inter, EB Garamond, DM Mono) */
+    :root { --ink: #141414; --paper: #f2efe9; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--paper); color: var(--ink); }
+    body { width: 1748px; height: 2480px; position: relative; overflow: hidden; }
+    .mono { font-family: "DM Mono", Menlo, monospace; text-transform: lowercase; }
+
+    header { position: absolute; left: 120px; right: 120px; top: 110px; display: flex;
+             justify-content: space-between; align-items: baseline;
+             padding-bottom: 34px; border-bottom: 2px solid rgba(20, 20, 20, .18); }
+    .guide { font: 500 56px/1 Inter, "Helvetica Neue", sans-serif; letter-spacing: -.02em; }
+    .guide em { font: italic 400 60px/1 "EB Garamond", Georgia, serif; letter-spacing: 0; }
+    .no { font-size: 36px; }
+
+    .calm { position: absolute; left: 70px; top: 230px; width: 1608px; height: 1500px; border: 0; }
+
+    .entry { position: absolute; left: 120px; top: 1760px; width: 1080px; }
+    .latin { font: italic 400 112px/1.02 "EB Garamond", Georgia, serif; margin: 0; }
+    .common { font-size: 38px; margin: 22px 0 0; opacity: .75; }
+    .line { font: 400 50px/1.32 "EB Garamond", Georgia, serif; margin: 42px 0 0; }
+    .eats { font-size: 32px; margin: 36px 0 0; opacity: .75; }
+    .dot { display: inline-block; width: 20px; height: 20px; border-radius: 50%; margin-right: 16px; vertical-align: 2px; }
+
+    .alarm-box { position: absolute; right: 120px; top: 1790px; width: 360px; text-align: center; }
+    .alarm { width: 360px; height: 360px; border: 0; display: block; }
+    .alarm-box .mono { font-size: 28px; opacity: .75; margin-top: 8px; }
+
+    footer { position: absolute; left: 120px; right: 120px; bottom: 100px; display: flex;
+             justify-content: space-between; font-size: 28px; opacity: .6;
+             padding-top: 30px; border-top: 2px solid rgba(20, 20, 20, .18); }
+  </style>
+  <script src="specimens.js?v=1"></script>
+</head>
+<body>
+  <header>
+    <span class="guide">Mikatoa – <em>a field guide</em></span>
+    <span class="no mono" id="no"></span>
+  </header>
+
+  <iframe class="calm" id="calm" title="calm"></iframe>
+
+  <section class="entry">
+    <p class="latin" id="latin"></p>
+    <p class="common mono" id="common"></p>
+    <p class="line" id="line"></p>
+    <p class="eats mono" id="eats"></p>
+  </section>
+
+  <div class="alarm-box">
+    <iframe class="alarm" id="alarm" title="alarmed"></iframe>
+    <div class="mono">alarmed</div>
+  </div>
+
+  <footer class="mono"><span>mikato · nudibranch · 2025</span><span>itsmikato.github.io</span></footer>
+
+  <script>
+    const n = Number(new URLSearchParams(location.search).get('n') || 1);
+    const sp = SPECIMENS[n - 1];
+    const no = (k) => String(k).padStart(2, '0');
+    document.getElementById('no').textContent = `no. ${no(n)} / ${no(SPECIMENS.length)}`;
+    document.getElementById('latin').textContent = sp.latin;
+    document.getElementById('common').innerHTML = `<i class="dot" style="background:${sp.calm[0]}"></i>${sp.name}`;
+    document.getElementById('line').textContent = sp.line;
+    document.getElementById('eats').textContent = `eats ${sp.eats}`;
+    document.getElementById('calm').src = `index.html?print=${n}&state=calm`;
+    document.getElementById('alarm').src = `index.html?print=${n}&state=alarm`;
+
+    // ready once both stills are drawn (render-posters.mjs waits for this)
+    const drawn = (f) => f.contentDocument && f.contentDocument.body && f.contentDocument.body.dataset.ready;
+    const wait = setInterval(() => {
+      if (drawn(document.getElementById('calm')) && drawn(document.getElementById('alarm'))) {
+        clearInterval(wait);
+        document.body.dataset.ready = 'true';
+      }
+    }, 100);
+  </script>
+</body>
+</html>
