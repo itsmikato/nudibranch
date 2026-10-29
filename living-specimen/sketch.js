@@ -20,16 +20,41 @@ const SVG_FILE = document.body.dataset.drawing || '../dragon-violet/wing_up.svg'
 const EMBEDDED = new URLSearchParams(location.search).has('embed');
 const STEP = 3;                 // sample a point every 3 units along each outline
 
-// the field guide: each specimen has a body colour and a tip colour, calm (pastel, from
-// the website's palette) and alarmed (the warning colours, chosen to blend cleanly into
-// the body colour – opposite colours would turn muddy in between); names are drafts
+// the field guide: six species of the invented genus Mikatoa. Each has a body colour and
+// a tip colour, calm (pastels from the website) and alarmed (warning colours, chosen to
+// blend cleanly into the body colour). Like real nudibranchs, each takes its colour – and
+// its warning – from what it eats.
 const SPECIMENS = [
-    { name: 'mint',     calm: ['#7fd8cc', '#f0d890'], alarm: ['#00a896', '#ffd23f'] },
-    { name: 'coral',    calm: ['#ff9a87', '#fbe3dc'], alarm: ['#f2352a', '#ffd000'] },
-    { name: 'lavender', calm: ['#a8a8e6', '#7fe6e0'], alarm: ['#5a3cf0', '#00e0cc'] },
-    { name: 'leaf',     calm: ['#a8f0c0', '#a8a8e6'], alarm: ['#14b85a', '#00c8f0'] },
-    { name: 'sand',     calm: ['#f0d890', '#ff9a87'], alarm: ['#ffab00', '#ff2d6f'] },
-    { name: 'ink',      calm: ['#141414', '#141414'], alarm: ['#141414', '#ff2d6f'] },
+    {
+        latin: 'Mikatoa menthae', name: 'mint drifter', eats: 'sea-grass hydroids',
+        line: 'Grazes the hydroids in sea-grass meadows; when touched, its tips light up yellow, a warning it borrowed from its food.',
+        calm: ['#7fd8cc', '#f0d890'], alarm: ['#00a896', '#ffd23f'],
+    },
+    {
+        latin: 'Mikatoa corallina', name: 'coral flame', eats: 'soft corals',
+        line: 'Lives on the soft corals it eats and keeps their sting; disturbed, it burns red from the inside out.',
+        calm: ['#ff9a87', '#fbe3dc'], alarm: ['#f2352a', '#ffd000'],
+    },
+    {
+        latin: 'Mikatoa lavandula', name: 'lavender dancer', eats: 'stinging anemones',
+        line: 'Feeds on anemones and stores their stinging cells in the tips of its limbs, which turn turquoise the moment it feels threatened.',
+        calm: ['#a8a8e6', '#7fe6e0'], alarm: ['#5a3cf0', '#00e0cc'],
+    },
+    {
+        latin: 'Mikatoa foliata', name: 'leaf sleeper', eats: 'green algae',
+        line: 'Keeps the green of the algae it eats alive in its body and sleeps in the light; only when disturbed does it flash cyan.',
+        calm: ['#a8f0c0', '#a8a8e6'], alarm: ['#14b85a', '#00c8f0'],
+    },
+    {
+        latin: 'Mikatoa arenaria', name: 'sand ember', eats: 'sponges in sandy shallows',
+        line: 'Hides on sandy ground, almost invisible, until something comes too close; then its tips glow like embers.',
+        calm: ['#f0d890', '#ff9a87'], alarm: ['#ffab00', '#ff2d6f'],
+    },
+    {
+        latin: 'Mikatoa atramentum', name: 'ink ghost', eats: 'unknown',
+        line: 'The rarest of the six. Its food is unknown; at rest it is pure ink, and only its warning shows any colour.',
+        calm: ['#141414', '#141414'], alarm: ['#141414', '#ff2d6f'],
+    },
 ];
 
 // the motion
@@ -71,7 +96,6 @@ function setup() {
     const canvas = createCanvas(windowWidth, windowHeight);
     if (EMBEDDED) canvas.elt.style.touchAction = 'pan-y';
     pixelDensity(Math.min(2, window.devicePixelRatio || 1));
-    textFont('Menlo');          // one name: p5 treats a list as a single font name
     noiseSeed(7);               // the rhythms are the same on every visit
 
     fetch(SVG_FILE)
@@ -191,15 +215,16 @@ function draw() {
     noticePointer(dt);
     fear *= Math.pow(CALM_DOWN, dt);
 
-    // embedded: smaller, so the limbs stay clear of the label at the bottom
-    const fit = Math.min(width, height) * (EMBEDDED ? 0.68 : 0.8) / bodyLength;
+    // the drawing fits into the space above the field-guide entry
+    const room = height - (label ? label.elt.offsetHeight : 0);
+    const fit = Math.min(width, room) * 0.82 / bodyLength;
     const breathe = 1 + WAVE.breathe * Math.sin(t * 0.7);
     const colours = currentColours();
 
     push();
     // float: wander and turn slowly around the middle of the frame
     translate(width / 2 + Math.sin(t * 0.13) * DRIFT.offset * bodyLength * fit,
-              height * (EMBEDDED ? 0.45 : 0.5) + Math.cos(t * 0.11) * DRIFT.offset * bodyLength * fit);
+              room / 2 + Math.cos(t * 0.11) * DRIFT.offset * bodyLength * fit);
     drawingContext.rotate(Math.sin(t * 0.09) * DRIFT.turn);
     scale(fit);
     translate(-axis.cx, -axis.cy);
@@ -261,21 +286,28 @@ function noticePointer(dt) {
     last = pointerHere ? { x: mouseX, y: mouseY } : null;
 }
 
-/* the field guide label */
+/* the field guide entry, as HTML over the canvas (so the line wraps and is set in
+   italics); only rewritten when the specimen or its state changes */
+let label = null, shown = '';
+
 function drawLabel() {
-    noStroke();
-    textSize(EMBEDDED ? 11 : 13);
-    const margin = EMBEDDED ? 16 : 24;
+    if (!label) {
+        label = createDiv('');
+        label.addClass('entry');
+        label.parent(document.body);
+    }
+    const sp = SPECIMENS[specimen];
     const state = fear > 0.25 ? 'alarmed' : 'calm';
-    fill(INK);
-    textAlign(LEFT, BOTTOM);
-    text(`specimen ${String(specimen + 1).padStart(2, '0')} · ${SPECIMENS[specimen].name} · ${state}`, margin, height - margin);
-    // narrow screens: the hint gets its own line above the label
-    const narrow = width < 640;
-    textAlign(narrow ? LEFT : RIGHT, BOTTOM);
-    fill(INK + '99');
-    const hint = narrow ? 'stir fast to startle · tap: next' : 'stir fast to startle · tap for the next specimen';
-    text(hint, narrow ? margin : width - margin, narrow ? height - margin - 20 : height - margin);
+    const key = specimen + state;
+    if (key === shown) return;
+    shown = key;
+    const no = String(specimen + 1).padStart(2, '0');
+    label.html(
+        `<p class="entry-meta">No. ${no} · <i>${sp.latin}</i> · ${sp.name}</p>` +
+        `<p class="entry-line">${sp.line}</p>` +
+        `<p class="entry-meta">eats ${sp.eats} · <span class="entry-state">${state}</span>` +
+        `<span class="entry-hint"> · stir fast to startle · tap: next</span></p>`
+    );
 }
 
 function nextSpecimen() {
