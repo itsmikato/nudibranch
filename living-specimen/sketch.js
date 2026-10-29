@@ -1,5 +1,5 @@
 // sketch.js – p5.js
-// Living specimen: the Nudibranch drawing as a creature in water.
+// Living specimen: the Nudibranch field guide's species as creatures in water.
 //
 // No poses are needed. Every point of the drawing turns a little around the body's
 // spine, more at the tips of the limbs than near the body, and the turn travels along
@@ -13,7 +13,9 @@
 // A click or tap shows the next specimen of the field guide.
 
 // the drawing: set by the page (<body data-drawing="…">), else the original in this repo
-const SVG_FILE = document.body.dataset.drawing || '../dragon-violet/wing_up.svg';
+// each species has its own drawing (specimens.js); the folder they're in is set by the
+// page (<body data-drawings="…">), else this repo's field-guide-drawings/
+const DRAWINGS = document.body.dataset.drawings || '../field-guide-drawings/';
 
 // embedded in another page (?embed, e.g. the portfolio's project page): the page must
 // still scroll on phones, so only sideways swipes stir there
@@ -53,9 +55,11 @@ const LINE = { outline: 0.8, shapes: 0.5 };
 const PAPER = '#f2efe9';
 const INK = '#141414';
 
+// the current species' drawing (all six are read at the start and kept in `drawings`)
 let shapes = [];                // { outline, pts: [{ x, y, s, d, r, o1, o2 }] }
 let axis = null;                // centre, direction along the body, and its normal
 let bodyLength = 1, maxD = 1;
+const drawings = [];
 let specimen = 0;
 let fear = 0;                   // 0 = calm, 1 = fully frightened
 let last = null;                // previous pointer position, to measure its speed
@@ -72,14 +76,22 @@ function setup() {
     }
     noiseSeed(7);               // the rhythms are the same on every visit
 
-    fetch(SVG_FILE)
-        .then((res) => res.text())
-        .then(readDrawing)
-        .catch((err) => console.error('Could not load the drawing', err));
+    Promise.all(SPECIMENS.map((sp) => fetch(DRAWINGS + sp.drawing).then((res) => res.text())))
+        .then((texts) => {
+            texts.forEach((text, i) => (drawings[i] = readDrawing(text)));
+            show(specimen);
+        })
+        .catch((err) => console.error('Could not load the drawings', err));
+}
+
+/* make a species' drawing the current one */
+function show(i) {
+    ({ shapes, axis, bodyLength, maxD } = drawings[i]);
 }
 
 /* every path as a list of points, then the body's axis from all of them */
 function readDrawing(svgText) {
+    shapes = [];
     const doc = new DOMParser().parseFromString(svgText, 'image/svg+xml');
     // the browser only measures paths that are part of a document
     const holder = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -102,6 +114,7 @@ function readDrawing(svgText) {
     holder.remove();
 
     findAxis();
+    return { shapes, axis, bodyLength, maxD };
 }
 
 /* the body's direction: the main axis of all points (principal component) */
@@ -120,6 +133,7 @@ function findAxis() {
 
     // each point's place along the body (s) and distance from the spine (d)
     let maxS = 0;
+    maxD = 1;
     for (const sh of shapes) {
         for (const p of sh.pts) {
             const dx = p.x - cx, dy = p.y - cy;
@@ -296,6 +310,7 @@ function drawLabel() {
 
 function nextSpecimen() {
     specimen = (specimen + 1) % SPECIMENS.length;
+    if (drawings[specimen]) show(specimen);
 }
 
 // a click shows the next specimen
