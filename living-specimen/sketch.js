@@ -323,3 +323,14 @@ function touchEnded() {
 function windowResized() {
     resizeCanvas(windowWidth, windowHeight);
 }
+
+// embedded: the page around it handles the arrow keys (switching images) and Esc,
+// even once a click has given this frame the keyboard focus
+if (EMBEDDED && window.parent !== window) {
+    window.addEventListener('keydown', (e) => {
+        if (['ArrowLeft', 'ArrowRight', 'Escape'].includes(e.key)) {
+            e.preventDefault();
+            window.parent.postMessage({ specimenKey: e.key }, location.origin);
+        }
+    });
+}
